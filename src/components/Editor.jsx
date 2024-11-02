@@ -6,7 +6,9 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
+import { ListNode, ListItemNode } from "@lexical/list";
 import { lexicalTheme } from "./lexicalTheme";
 import ToolBarPlugin from "../plugins/ToolbarPlugin";
 import "../stylesheets/Editor.css";
@@ -16,7 +18,7 @@ const Editor = ({ placeholder="Enter some rich text..." }) => {
 const editorConfig = {
   namespace: "Lexical Editor",
   theme: lexicalTheme,
-  nodes: [],
+  nodes: [ListNode, ListItemNode],
   onError(error) {
     throw error;
   },
@@ -40,6 +42,7 @@ const editorConfig = {
             ErrorBoundary={LexicalErrorBoundary}
           />
           <HistoryPlugin />
+          <ListPlugin />
           <AutoFocusPlugin />
         </div>
       </div>

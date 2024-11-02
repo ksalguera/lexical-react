@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import {useLexicalComposerContext} from "@lexical/react/LexicalComposerContext";
 import {mergeRegister} from "@lexical/utils";
 import {
@@ -11,7 +12,12 @@ import {
   SELECTION_CHANGE_COMMAND,
   UNDO_COMMAND,
 } from "lexical";
-import {useCallback, useEffect, useRef, useState} from "react";
+import { 
+  INSERT_ORDERED_LIST_COMMAND,
+  INSERT_UNORDERED_LIST_COMMAND,
+  REMOVE_LIST_COMMAND,
+  $isListNode,
+} from "@lexical/list";
 
 const LowPriority = 1;
 
@@ -28,29 +34,124 @@ export default function ToolbarPlugin() {
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
   const [isStrikethrough, setIsStrikethrough] = useState(false);
+  const [isOrderedList, setIsOrderedList] = useState(false);
+  const [isUnorderedList, setIsUnorderedList] = useState(false);
 
-  const $updateToolbar = useCallback(() => {
+  const getListState = (selection) => {
+    const anchorNode = selection.anchor.getNode();
+    const parentNode = anchorNode.getParent();
+    let orderedList = false;
+    let unorderedList = false;
+
+    if (parentNode && $isListNode(parentNode)){
+      // const parentTag = parentNode.getTag();
+
+      if (parentNode.getTag() === "ol") {
+        orderedList = true;
+      } else if (parentNode.getTag() === "ul") {
+        unorderedList = true;
+      }
+    }
+
+    return { orderedList, unorderedList };
+  }
+
+  const updateToolbar = useCallback(() => {
     const selection = $getSelection();
     if ($isRangeSelection(selection)) {
-      // Update text format
+
       setIsBold(selection.hasFormat("bold"));
       setIsItalic(selection.hasFormat("italic"));
       setIsUnderline(selection.hasFormat("underline"));
       setIsStrikethrough(selection.hasFormat("strikethrough"));
+
+      const { orderedList, unorderedList } = getListState(selection);
+      setIsOrderedList(orderedList);
+      setIsUnorderedList(unorderedList);
     }
   }, []);
+  // console.log("bullet:", isUnorderedList)
+  // console.log("ordered:", isOrderedList)
+  // const handleListChange = (listType, isActive, setIsActive, otherSetIsActive) => {
+  //   editor.update(() => {
+  //     const selection = $getSelection();
+  //     if ($isRangeSelection(selection)) {
+  //       if (isActive) {
+  //         console.log("remove list command")
+  //         editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
+  //         isActive === isOrderedList ? setIsOrderedList(false) : setIsUnorderedList(false);
+  //       } else {
+  //         editor.dispatchCommand(listType, undefined);
+  //         isActive === isOrderedList ? setIsOrderedList(true) : setIsUnorderedList(true);
+  //         setIsActive(true);
+  //         // otherSetIsActive(false);
+  //       }
+  //     }
+  //     updateToolbar();
+  //   });
+  // };
+
+  const handleListChange = (listType, isActive, setIsActive,) => {
+    editor.update(() => {
+      editor.getEditorState().read(() => {
+        const selection = $getSelection();
+        
+        if ($isRangeSelection(selection)) {
+          const nodes = selection.getNodes();
+          const listItemsToRemove = [];
+    
+          nodes.forEach((node) => {
+            let targetNode = node;
+    
+            if (targetNode.getType() === 'text' || targetNode.isEmpty()) {
+              targetNode = targetNode.getParent();  
+            }
+    
+            const parentNode = targetNode.getParent();
+            if (parentNode && $isListNode(parentNode)) {
+              listItemsToRemove.push(targetNode);
+            }
+          });
+    
+          if (listItemsToRemove.length > 0) {
+            listItemsToRemove.forEach(() => {
+              editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined); 
+              setIsUnorderedList(false);
+            });
+          } else {
+            editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
+            setIsOrderedList(true);
+          }
+        }
+      })
+    });
+    
+
+
+      // if ($isRangeSelection(selection)) {
+      //   if (isUnorderedList) {
+      //     console.log("remove list command")
+      //     editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
+      //     setIsUnorderedList(false);
+      //   } else {
+      //     editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
+      //     setIsOrderedList(false)
+      //     setIsUnorderedList(true);
+      //   }
+      // }
+  };
 
   useEffect(() => {
     return mergeRegister(
       editor.registerUpdateListener(({editorState}) => {
         editorState.read(() => {
-          $updateToolbar();
+          updateToolbar();
         });
       }),
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         (_payload, _newEditor) => {
-          $updateToolbar();
+          updateToolbar();
           return false;
         },
         LowPriority,
@@ -72,7 +173,7 @@ export default function ToolbarPlugin() {
         LowPriority,
       ),
     );
-  }, [editor, $updateToolbar]);
+  }, [editor, updateToolbar]);
 
   return (
     <div className="toolbar" ref={toolbarRef}>
@@ -120,11 +221,16 @@ export default function ToolbarPlugin() {
         <i className="format underline" />
       </button>
       <button
-        onClick={() => {
-          alert("working")
-        }}
+        onClick={handleListChange}
+        className={"toolbar-item spaced " + (isUnorderedList ? "active" : "")}
         aria-label="Format Unordered">
         <i className="format unordered" />
+      </button>
+      <button
+        onClick={handleListChange}
+        className={"toolbar-item spaced " + (isOrderedList ? "active" : "")}
+        aria-label="Format Ordered">
+        <i className="format ordered" />
       </button>
       {/* <button
         onClick={() => {

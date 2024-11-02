@@ -315,7 +315,7 @@ pre::-webkit-scrollbar-thumb {
 }
 
 .toolbar button.toolbar-item.active {
-  background-color: rgba(223, 232, 250, 0.3);
+  background-color: rgba(223, 232, 250, 0.8);
 }
 
 .toolbar button.toolbar-item.active i {
@@ -377,8 +377,13 @@ i.underline {
 }
 
 i.unordered {
-  background-image: url("icons/ul-list.svg");
+  background-image: url("icons/format-ul.svg");
 }
+
+i.ordered {
+  background-image: url("icons/format-ol.svg");
+}
+
 /*
 i.strikethrough {
   background-image: url(icons/type-strikethrough.svg);
